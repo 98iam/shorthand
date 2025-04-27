@@ -144,20 +144,58 @@ analyzeBtn.addEventListener('click', async () => {
   typedText.innerHTML = colorDiff(original, typed);
   // Local stats
   const stats = getStats(original, typed);
-  const localStatsHTML = `
-    <span class='text-green-700 font-semibold'>Local Analysis:</span><br>
-    Correct: <span class='text-green-600 font-bold'>${stats.correct}</span> |
-    Mistakes: <span class='text-red-600 font-bold'>${stats.mistakes}</span> |
-    Spelling: <span class='text-orange-600 font-bold'>${stats.spelling}</span> |
-    Accuracy: <span class='font-bold'>${stats.accuracy}%</span>
-  `;
-  analysisStats.innerHTML = localStatsHTML + `<br><span class='text-blue-600 font-semibold'>Analyzing with Gemini 1.5 Pro...</span>`;
+  const localMarks = stats.accuracy;
+const localStatsHTML = `
+  <span class='text-green-700 font-semibold'>System Analysis:</span><br>
+  <span class='block mb-1'>Correct: <span class='text-green-600 font-bold'>${stats.correct}</span> |
+  Mistakes: <span class='text-red-600 font-bold'>${stats.mistakes}</span> |
+  Spelling: <span class='text-orange-600 font-bold'>${stats.spelling}</span> |
+  Accuracy: <span class='font-bold'>${stats.accuracy}%</span></span>
+  <span class='block mb-2 text-blue-400 font-bold'>Marks: ${localMarks}/100</span>
+`;
+  analysisStats.innerHTML = `
+  <div class='flex flex-col md:flex-row gap-6'>
+    <div class='flex-1 bg-black/40 rounded-lg p-3 border border-gray-700'>
+      ${localStatsHTML}
+    </div>
+    <div id='aiAnalysisBox' class='flex-1 bg-black/40 rounded-lg p-3 border border-gray-700'>
+      <span class='text-blue-600 font-semibold'>AI Analysis:</span><br>
+      <span class='block mb-2 text-blue-400 font-bold'>Marks: <span id='aiMarks'>...</span></span>
+      <span class='text-blue-400'>Analyzing with Gemini 1.5 Pro...</span>
+    </div>
+  </div>
+`;
   drawGraph(stats.history);
   let geminiResult = '';
   let spellingMistakes = [];
   try {
     geminiResult = await analyzeWithGemini(original, typed);
-    analysisStats.innerHTML = localStatsHTML + `<br><span class='text-green-700 font-semibold'>Gemini Feedback:</span><br><div class='bg-orange-50 border-l-4 border-orange-400 p-2 rounded my-2 text-gray-800 dark:bg-slate-800 dark:border-orange-500 dark:text-gray-100'>${geminiResult}</div>`;
+    // Extract AI marks and total mistakes if present
+    let aiMarks = '...';
+    let aiMistakes = '...';
+    const marksMatch = geminiResult.match(/(?:Marks|Score)\s*[:=]\s*(\d{1,3})\s*\/?\s*100/i);
+    if (marksMatch) aiMarks = marksMatch[1];
+    else {
+      // fallback: try to extract a percentage
+      const percentMatch = geminiResult.match(/(\d{1,3})\s*%/);
+      if (percentMatch) aiMarks = percentMatch[1];
+    }
+    const mistakesMatch = geminiResult.match(/Total Mistakes\s*[:=]\s*(\d+)/i);
+    if (mistakesMatch) aiMistakes = mistakesMatch[1];
+    // Render both analyses side by side
+    analysisStats.innerHTML = `
+      <div class='flex flex-col md:flex-row gap-6'>
+        <div class='flex-1 bg-black/40 rounded-lg p-3 border border-gray-700'>
+          ${localStatsHTML}
+        </div>
+        <div id='aiAnalysisBox' class='flex-1 bg-black/40 rounded-lg p-3 border border-gray-700'>
+          <span class='text-blue-600 font-semibold'>AI Analysis:</span><br>
+          <span class='block mb-2 text-blue-400 font-bold'>Marks: ${aiMarks}/100</span>
+          <span class='block mb-2 text-red-400 font-bold'>Total Mistakes: ${aiMistakes}</span>
+          <div class='bg-orange-50 border-l-4 border-orange-400 p-2 rounded my-2 text-gray-800 dark:bg-slate-800 dark:border-orange-500 dark:text-gray-100'>${geminiResult}</div>
+        </div>
+      </div>
+    `;
     // Ask Gemini for spelling mistakes as JSON
     try {
       spellingMistakes = await getGeminiSpellingMistakes(original, typed);
@@ -186,7 +224,10 @@ analyzeBtn.addEventListener('click', async () => {
       originalText: original,
       typedText: typed,
       localStats: localStatsHTML,
+      localMarks: localMarks,
       geminiFeedback: geminiResult,
+      aiMarks: aiMarks,
+      aiMistakes: aiMistakes,
       graphHistory: stats.history,
       spellingMistakes: spellingMistakes
     });
@@ -263,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function analyzeWithGemini(original, typed) {
   const apiKey = 'AIzaSyD3ZOFgX8cn2FDS_D3HYK8xq7jFC_1-4jQ';
   const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=' + apiKey;
-  const prompt = `Compare the following two texts. The first is the original dictation, the second is what the user typed. List all mistakes, spelling errors, grammar issues, and missing or extra words. Give detailed feedback in a clear, easy-to-read way.\n\nOriginal:\n${original}\n\nUser Typed:\n${typed}`;
+  const prompt = `Compare the following two texts. The first is the original dictation, the second is what the user typed. List all mistakes, spelling errors, grammar issues, and missing or extra words. Give detailed feedback in a clear, easy-to-read way.\n\nOriginal:\n${original}\n\nUser Typed:\n${typed}\n\nAt the end, provide:\n- Marks: X/100 (where X is your score for the user)\n- Total Mistakes: Y (where Y is the number of total mistakes found)\nExample:\nMarks: 82/100\nTotal Mistakes: 7`;
   const body = {
     contents: [
       {

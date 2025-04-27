@@ -75,16 +75,25 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
           <div class='mt-4'>
-            <h4 class='font-semibold'>Local Analysis</h4>
-            <div class='mb-2'>${item.localStats || ''}</div>
-            <canvas id='historyGraph' class='w-full h-32 bg-white dark:bg-slate-900 rounded shadow mb-4'></canvas>
-            <h4 class='font-semibold mt-2'>Gemini Feedback</h4>
-            <div class='mb-2'>${item.geminiFeedback || ''}</div>
-            <h4 class='font-semibold mt-2'>Spelling Mistakes</h4>
-            <ul class='list-disc pl-6'>
-              ${(item.spellingMistakes||[]).map(m => `<li><span class='text-orange-700 dark:text-orange-300 font-semibold'>${m.actual}</span> → <span class='text-red-600 dark:text-red-300'>${m.error}</span></li>`).join('') || '<li class="text-gray-500 dark:text-gray-300">None</li>'}
-            </ul>
-          </div>
+  <div class='flex flex-col md:flex-row gap-6'>
+    <div class='flex-1 bg-black/40 rounded-lg p-3 border border-gray-700'>
+      <h4 class='font-semibold'>System Analysis</h4>
+      <div class='mb-2'>${item.localStats || ''}</div>
+      <span class='block mb-2 text-blue-400 font-bold'>Marks: ${item.localMarks !== undefined ? item.localMarks : 'N/A'}/100</span>
+    </div>
+    <div class='flex-1 bg-black/40 rounded-lg p-3 border border-gray-700'>
+      <h4 class='font-semibold'>AI Analysis</h4>
+      <span class='block mb-2 text-blue-400 font-bold'>Marks: ${item.aiMarks !== undefined ? item.aiMarks : 'N/A'}/100</span>
+      <span class='block mb-2 text-red-400 font-bold'>Total Mistakes: ${item.aiMistakes !== undefined ? item.aiMistakes : 'N/A'}</span>
+      <div class='mb-2'>${item.geminiFeedback || ''}</div>
+    </div>
+  </div>
+  <canvas id='historyGraph' class='w-full h-32 bg-white dark:bg-slate-900 rounded shadow mb-4 mt-4'></canvas>
+  <h4 class='font-semibold mt-2'>Spelling Mistakes</h4>
+  <ul class='list-disc pl-6'>
+    ${(item.spellingMistakes||[]).map(m => `<li><span class='text-orange-700 dark:text-orange-300 font-semibold'>${m.actual}</span> → <span class='text-red-600 dark:text-red-300'>${m.error}</span></li>`).join('') || '<li class="text-gray-500 dark:text-gray-300">None</li>'}
+  </ul>
+</div>
         </div>
       `;
       // Draw graph
